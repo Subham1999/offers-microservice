@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -70,31 +71,58 @@ public class OfferService implements GenericOfferService {
 		Optional<Offer> foundByOfferId = offerRepository.findByOfferId(offerId);
 		if (foundByOfferId.isPresent()) {
 			log.debug("preparing offer status for offerId {}", offerId);
-			Offer offer = foundByOfferId.get();
-			matrix.put("Author ID", offer.getAuthorId());
-			if (!offer.getBuyerId().isBlank()) {
-				matrix.put("Buyer ID", offer.getBuyerId());
-			}
-			matrix.put("Category", offer.getOfferCategory().toString());
-			matrix.put("Details", offer.getDetails());
-			matrix.put("Open status", Boolean.toString(offer.isOpen()));
-			matrix.put("Likes", Integer.toString(offer.getLikes()));
+			buildMatrix(matrix, foundByOfferId);
 			return matrix;
 		} else {
 			return matrix;
 		}
 	}
 
-	@Override
-	public List<Offer> getOffersByCategory(OfferCategory offerCategory) {
-		// TODO Auto-generated method stub
-		return null;
+	public void buildMatrix(Map<String, String> matrix, Optional<Offer> foundByOfferId) {
+		Offer offer = foundByOfferId.get();
+		matrix.put("Author ID", offer.getAuthorId());
+		if (!offer.getBuyerId().isBlank()) {
+			matrix.put("Buyer ID", offer.getBuyerId());
+		}
+		matrix.put("Category", offer.getOfferCategory().toString());
+		matrix.put("Details", offer.getDetails());
+		matrix.put("Open status", Boolean.toString(offer.isOpen()));
+		matrix.put("Likes", Integer.toString(offer.getLikes()));
 	}
 
 	@Override
-	public Map<Integer, Offer> getTopOffers(String authorId) {
-		// TODO Auto-generated method stub
-		return null;
+	public List<Offer> getOffersByCategory(OfferCategory offerCategory) {
+		return offerRepository.findByOfferCategory(offerCategory);
+	}
+
+	public List<Offer> getOffersByCategory(OfferCategory offerCategory, int offerId) {
+		return offerRepository.findByOfferCategory(offerCategory).stream().filter(o -> o.getOfferId() == offerId)
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public List<Offer> getTopOffers() {
+		List<Offer> collect = offerRepository.findAll()
+					.stream()
+					.sorted((o1, o2) -> o2.getLikes() - o1.getLikes()) // reverse sort on likes {max to min}
+					.collect(Collectors.toList());
+		return collect;
+	}
+
+	public List<Offer> getTopNOffers(int n) {
+		if (n > 0) {
+			// reverse sort on likes {max to min}
+			List<Offer> collect = offerRepository.findAll()
+					.stream()
+					.sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
+					.collect(Collectors.toList());
+			
+			// sublist from begining
+			// if n > collect.size() => invalid request
+			return (n > collect.size()) ? List.of() : collect.subList(0, n);
+		} else {
+			return List.of();
+		}
 	}
 
 	@Override
@@ -104,3 +132,4 @@ public class OfferService implements GenericOfferService {
 	}
 
 }
+

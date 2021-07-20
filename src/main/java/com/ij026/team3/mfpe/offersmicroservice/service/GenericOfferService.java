@@ -26,8 +26,7 @@ public interface GenericOfferService {
 	 * @param minLikes
 	 * @return all offers with minimum {minLikes}
 	 */
-	// [{"likes" : 150, {"akgkags"}}, {"likes" : 87, {"akgkags"}}, {"likes" : 80, {"akgkags"}}, ...]	
-	Map<Integer, Offer> getTopOffers(String authorId);
+	List<Offer> getTopOffers();
 	
 	Map<Integer, Offer> getOffersByCreationDate(LocalDate createdAt);
 }
