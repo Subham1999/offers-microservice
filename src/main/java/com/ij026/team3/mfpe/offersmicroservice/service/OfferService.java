@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,25 +110,19 @@ public class OfferService implements GenericOfferService {
 
 	@Override
 	public List<Offer> getTopOffers() {
-		List<Offer> collect = offerRepository.findAll().stream().sorted((o1, o2) -> o2.getLikes() - o1.getLikes()) // reverse
-																													// sort
-																													// on
-																													// likes
-																													// {max
-																													// to
-																													// min}
+		List<Offer> collect = offerRepository.findAll().stream().sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
 				.collect(Collectors.toList());
 		return collect;
 	}
 
-	public List<Offer> getTopNOffers(int n) {
+	public List<Offer> getTopNOffers(int n, Predicate<Offer> predicate) {
 		if (n > 0) {
 			// reverse sort on likes {max to min}
-			List<Offer> collect = offerRepository.findAll().stream().sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
+			List<Offer> collect = offerRepository.findAll()
+					.stream()
+					.filter(predicate)
+					.sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
 					.collect(Collectors.toList());
-
-			// sublist from begining
-			// if n > collect.size() => invalid request
 			return (n > collect.size()) ? List.of() : collect.subList(0, n);
 		} else {
 			return List.of();

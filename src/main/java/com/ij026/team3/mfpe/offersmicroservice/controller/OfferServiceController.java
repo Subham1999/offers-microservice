@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
@@ -27,6 +28,10 @@ import com.ij026.team3.mfpe.offersmicroservice.service.OfferService;
 
 import lombok.extern.log4j.Log4j2;
 
+/**
+ * @author Admin
+ *
+ */
 @RestController
 @Log4j2
 public class OfferServiceController {
@@ -42,7 +47,7 @@ public class OfferServiceController {
 		map.forEach((s, o) -> System.err.println(s + " : " + o));
 		return "aaa";
 	}
-	
+
 	@GetMapping("/offers")
 	public Collection<Offer> getOffers() {
 		return offerService.allOffers();
@@ -72,10 +77,31 @@ public class OfferServiceController {
 		}
 	}
 
+	/**
+	 * 
+	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes?limit=3&empId=sub123
+	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes?limit=3
+	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes
+	 * 
+	 * @param limit
+	 * @param empId
+	 * @return
+	 */
 	@GetMapping("/offers/search/by-likes")
-	public ResponseEntity<?> getOfferDetailsByLikes(@RequestParam(required = false, defaultValue = "3") Integer limit) {
+	public ResponseEntity<?> getOfferDetailsByLikes(@RequestParam(required = false, defaultValue = "3") Integer limit,
+			@RequestParam(required = false) String empId) {
 		try {
-			List<Offer> offers = offerService.getTopNOffers(limit);
+			
+			Predicate<Offer> predicate;
+			
+			if (empId == null) {
+				predicate = o -> true;
+			} else {
+				predicate = o -> o.getAuthorId().equals(empId);
+			}
+			
+			List<Offer> offers = offerService.getTopNOffers(limit, predicate);
+			
 			log.debug("fetching top offer details by likes was succesfull");
 			return ResponseEntity.ok(offers);
 		} catch (Exception e) {
