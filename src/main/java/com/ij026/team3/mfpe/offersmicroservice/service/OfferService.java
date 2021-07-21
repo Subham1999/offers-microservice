@@ -1,6 +1,7 @@
 package com.ij026.team3.mfpe.offersmicroservice.service;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,8 +24,14 @@ public class OfferService implements GenericOfferService {
 	@Autowired
 	private OfferRepository offerRepository;
 
+	public Collection<Offer> allOffers() {
+		return offerRepository.findAll();
+	}
+
 	@Override
 	public boolean createOffer(Offer offer) {
+		if (checkIfPresent(offer.getOfferId()))
+			return false;
 		Offer save = offerRepository.save(offer);
 		return save != null;
 	}
@@ -39,7 +46,7 @@ public class OfferService implements GenericOfferService {
 		return false;
 	}
 
-	private boolean checkIfPresent(int offerId) {
+	public boolean checkIfPresent(int offerId) {
 		return offerRepository.findByOfferId(offerId).isPresent();
 	}
 
@@ -102,21 +109,23 @@ public class OfferService implements GenericOfferService {
 
 	@Override
 	public List<Offer> getTopOffers() {
-		List<Offer> collect = offerRepository.findAll()
-					.stream()
-					.sorted((o1, o2) -> o2.getLikes() - o1.getLikes()) // reverse sort on likes {max to min}
-					.collect(Collectors.toList());
+		List<Offer> collect = offerRepository.findAll().stream().sorted((o1, o2) -> o2.getLikes() - o1.getLikes()) // reverse
+																													// sort
+																													// on
+																													// likes
+																													// {max
+																													// to
+																													// min}
+				.collect(Collectors.toList());
 		return collect;
 	}
 
 	public List<Offer> getTopNOffers(int n) {
 		if (n > 0) {
 			// reverse sort on likes {max to min}
-			List<Offer> collect = offerRepository.findAll()
-					.stream()
-					.sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
+			List<Offer> collect = offerRepository.findAll().stream().sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
 					.collect(Collectors.toList());
-			
+
 			// sublist from begining
 			// if n > collect.size() => invalid request
 			return (n > collect.size()) ? List.of() : collect.subList(0, n);
@@ -132,4 +141,3 @@ public class OfferService implements GenericOfferService {
 	}
 
 }
-
