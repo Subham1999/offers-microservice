@@ -54,11 +54,12 @@ public class OfferServiceController {
 	}
 
 	@GetMapping("/offers/{offerId}")
-	public ResponseEntity<?> getOfferDetails(@PathVariable String offerId) {
+	public ResponseEntity<?> getOfferDetails(@PathVariable int offerId) {
 		try {
-			Map<String, String> offerStatus = offerService.offerStatus(Integer.parseInt(offerId));
+			Optional<Offer> offerStatus = offerService.getOffer(offerId);
 			log.debug("fetching offer details by offer id {} was succesfull", offerId);
-			return ResponseEntity.ok(offerStatus);
+			return offerStatus.isPresent() ? ResponseEntity.ok(offerStatus)
+					: ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 		} catch (Exception e) {
 			log.debug("exception {}", e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
@@ -76,6 +77,18 @@ public class OfferServiceController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
 		}
 	}
+
+//	@GetMapping("/offers/search/by-author")
+//	public ResponseEntity<?> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId) {
+//		try {
+//			List<Offer> offers = offerService.getOfferByAuthorId(authorId);
+//			log.debug("fetching offer details by authorId {} was succesfull", offers.toString());
+//			return ResponseEntity.ok(offers);
+//		} catch (Exception e) {
+//			log.debug("exception {}", e.getMessage());
+//			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+//		}
+//	}
 
 	/**
 	 * 
@@ -133,14 +146,16 @@ public class OfferServiceController {
 	}
 
 	@GetMapping("/offers/search/by-author")
-	public ResponseEntity<?> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId,
-			@RequestParam(required = false) boolean open) {
+	public ResponseEntity<?> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId) {
+
+		Predicate<Offer> filter1 = o -> o.getAuthorId().equals(authorId);
 
 		try {
 			Collection<Offer> allOffers = offerService.allOffers();
-			List<Offer> offers = allOffers.stream().filter(Offer::isOpen).collect(Collectors.toList());
+			List<Offer> offers = allOffers.stream().filter(filter1).collect(Collectors.toList());
 			log.debug("fetching top offer details by likes was succesfull");
 			return ResponseEntity.ok(offers);
+
 		} catch (Exception e) {
 			log.debug("exception {}", e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());

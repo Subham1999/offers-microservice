@@ -35,6 +35,10 @@ public class OfferService implements GenericOfferService {
 		return offerRepository.findByOfferId(offerId);
 	}
 
+	public List<Offer> getOfferByAuthorId(String authorId) {
+		return offerRepository.findByAuthorId(authorId);
+	}
+
 	public Offer updateOffer(Offer offer) {
 		return offerRepository.save(offer);
 	}
