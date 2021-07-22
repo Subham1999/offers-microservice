@@ -134,8 +134,9 @@ public class OfferService implements GenericOfferService {
 		if (n > 0) {
 			// reverse sort on likes {max to min}
 			List<Offer> collect = offerRepository.findAll().stream().filter(predicate)
-					.sorted((o1, o2) -> o2.getLikes().size() - o1.getLikes().size()).collect(Collectors.toList());
-			return (n > collect.size()) ? List.of() : collect.subList(0, n);
+					.sorted((o1, o2) -> o2.getLikes().size() - o1.getLikes().size())
+					.collect(Collectors.toList());
+			return collect.subList(0, n);
 		} else {
 			return List.of();
 		}
