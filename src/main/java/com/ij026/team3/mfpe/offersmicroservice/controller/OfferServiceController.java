@@ -54,41 +54,30 @@ public class OfferServiceController {
 	}
 
 	@GetMapping("/offers/{offerId}")
-	public ResponseEntity<?> getOfferDetails(@PathVariable int offerId) {
+	public ResponseEntity<Offer> getOfferDetails(@PathVariable int offerId) {
 		try {
 			Optional<Offer> offerStatus = offerService.getOffer(offerId);
 			log.debug("fetching offer details by offer id {} was succesfull", offerId);
-			return offerStatus.isPresent() ? ResponseEntity.ok(offerStatus)
+			return offerStatus.isPresent() ? ResponseEntity.ok(offerStatus.get())
 					: ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 		} catch (Exception e) {
 			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 		}
 	}
 
 	@GetMapping("/offers/search/by-category")
-	public ResponseEntity<?> getOfferDetailsByCategory(@RequestParam(required = true) OfferCategory offerCategory) {
+	public ResponseEntity<List<Offer>> getOfferDetailsByCategory(
+			@RequestParam(required = true) OfferCategory offerCategory) {
 		try {
 			List<Offer> offers = offerService.getOffersByCategory(offerCategory);
 			log.debug("fetching offer details by category {} was succesfull", offerCategory.toString());
 			return ResponseEntity.ok(offers);
 		} catch (Exception e) {
 			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 		}
 	}
-
-//	@GetMapping("/offers/search/by-author")
-//	public ResponseEntity<?> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId) {
-//		try {
-//			List<Offer> offers = offerService.getOfferByAuthorId(authorId);
-//			log.debug("fetching offer details by authorId {} was succesfull", offers.toString());
-//			return ResponseEntity.ok(offers);
-//		} catch (Exception e) {
-//			log.debug("exception {}", e.getMessage());
-//			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-//		}
-//	}
 
 	/**
 	 * 
@@ -102,7 +91,8 @@ public class OfferServiceController {
 	 * @return
 	 */
 	@GetMapping("/offers/search/by-likes")
-	public ResponseEntity<?> getOfferDetailsByLikes(@RequestParam(required = false, defaultValue = "3") Integer limit,
+	public ResponseEntity<List<Offer>> getOfferDetailsByLikes(
+			@RequestParam(required = false, defaultValue = "3") Integer limit,
 			@RequestParam(required = false) String empId) {
 		try {
 
@@ -120,19 +110,19 @@ public class OfferServiceController {
 			return ResponseEntity.ok(offers);
 		} catch (Exception e) {
 			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 		}
 	}
 
 	@GetMapping("/offers/search/by-creation-date")
-	public ResponseEntity<?> getOfferDetailsByPostDate(@RequestParam(required = true) String createdOn) {
+	public ResponseEntity<List<Offer>> getOfferDetailsByPostDate(@RequestParam(required = true) String createdOn) {
 		LocalDate createdAt = null;
 
 		try {
 			createdAt = LocalDate.parse(createdOn, dateTimeFormatter);
 		} catch (DateTimeException e) {
 			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 		}
 
 		try {
@@ -141,12 +131,12 @@ public class OfferServiceController {
 			return ResponseEntity.ok(offers);
 		} catch (Exception e) {
 			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 		}
 	}
 
 	@GetMapping("/offers/search/by-author")
-	public ResponseEntity<?> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId) {
+	public ResponseEntity<List<Offer>> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId) {
 
 		Predicate<Offer> filter1 = o -> o.getAuthorId().equals(authorId);
 
@@ -158,26 +148,26 @@ public class OfferServiceController {
 
 		} catch (Exception e) {
 			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 		}
 	}
 
 	@PostMapping("/offers")
-	public ResponseEntity<Object> addOffer(@Valid @RequestBody Offer newOffer) {
+	public ResponseEntity<Boolean> addOffer(@Valid @RequestBody Offer newOffer) {
 		boolean b = offerService.createOffer(newOffer);
-		return b ? ResponseEntity.status(HttpStatus.CREATED).build()
-				: ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
+		return b ? ResponseEntity.status(HttpStatus.CREATED).body(b)
+				: ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(b);
 	}
 
 	@PostMapping("/offers/{offerId}/likes")
-	public ResponseEntity<Object> likeOffer(@PathVariable int offerId, @RequestParam(required = true) String likedBy) {
+	public ResponseEntity<Offer> likeOffer(@PathVariable int offerId, @RequestParam(required = true) String likedBy) {
 		Optional<Offer> optional = offerService.getOffer(offerId);
 		if (optional.isPresent()) {
 			Offer offer = optional.get();
 			offer.like(likedBy);
 			return ResponseEntity.status(HttpStatus.ACCEPTED).body(offerService.updateOffer(offer));
 		}
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("offerId invalid");
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 	}
 
 }
