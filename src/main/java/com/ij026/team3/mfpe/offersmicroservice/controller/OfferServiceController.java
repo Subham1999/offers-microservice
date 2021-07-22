@@ -6,13 +6,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -79,9 +79,10 @@ public class OfferServiceController {
 
 	/**
 	 * 
-	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes?limit=3&empId=sub123
-	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes?limit=3
-	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes
+	 * URI ->
+	 * http://locahost:8080/offer-service/offers/search/by-likes?limit=3&empId=sub123
+	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes?limit=3 URI
+	 * -> http://locahost:8080/offer-service/offers/search/by-likes
 	 * 
 	 * @param limit
 	 * @param empId
@@ -91,17 +92,17 @@ public class OfferServiceController {
 	public ResponseEntity<?> getOfferDetailsByLikes(@RequestParam(required = false, defaultValue = "3") Integer limit,
 			@RequestParam(required = false) String empId) {
 		try {
-			
+
 			Predicate<Offer> predicate;
-			
+
 			if (empId == null) {
 				predicate = o -> true;
 			} else {
 				predicate = o -> o.getAuthorId().equals(empId);
 			}
-			
+
 			List<Offer> offers = offerService.getTopNOffers(limit, predicate);
-			
+
 			log.debug("fetching top offer details by likes was succesfull");
 			return ResponseEntity.ok(offers);
 		} catch (Exception e) {
@@ -122,7 +123,7 @@ public class OfferServiceController {
 		}
 
 		try {
-			Map<Integer, Offer> offers = offerService.getOffersByCreationDate(createdAt);
+			List<Offer> offers = offerService.getOffersByCreationDate(createdAt);
 			log.debug("fetching top offer details by likes was succesfull");
 			return ResponseEntity.ok(offers);
 		} catch (Exception e) {
@@ -151,6 +152,17 @@ public class OfferServiceController {
 		boolean b = offerService.createOffer(newOffer);
 		return b ? ResponseEntity.status(HttpStatus.CREATED).build()
 				: ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
+	}
+
+	@PostMapping("/offers/{offerId}/likes")
+	public ResponseEntity<Object> likeOffer(@PathVariable int offerId, @RequestParam(required = true) String likedBy) {
+		Optional<Offer> optional = offerService.getOffer(offerId);
+		if (optional.isPresent()) {
+			Offer offer = optional.get();
+			offer.like(likedBy);
+			return ResponseEntity.status(HttpStatus.ACCEPTED).body(offerService.updateOffer(offer));
+		}
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("offerId invalid");
 	}
 
 }

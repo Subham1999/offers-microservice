@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.validation.constraints.NotNull;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +29,14 @@ public class OfferService implements GenericOfferService {
 
 	public Collection<Offer> allOffers() {
 		return offerRepository.findAll();
+	}
+
+	public Optional<Offer> getOffer(int offerId) {
+		return offerRepository.findByOfferId(offerId);
+	}
+
+	public Offer updateOffer(Offer offer) {
+		return offerRepository.save(offer);
 	}
 
 	@Override
@@ -52,10 +62,10 @@ public class OfferService implements GenericOfferService {
 	}
 
 	@Override
-	public boolean likeOffer(String authorId, int offerId) {
+	public boolean likeOffer(String authorId, String likerEmpId, int offerId) {
 		Optional<Offer> foundByOfferId = offerRepository.findByOfferId(offerId);
 		if (foundByOfferId.isPresent()) {
-			foundByOfferId.get().like();
+			foundByOfferId.get().like(likerEmpId);
 			offerRepository.save(foundByOfferId.get());
 			return true;
 		}
@@ -95,7 +105,7 @@ public class OfferService implements GenericOfferService {
 		matrix.put("Category", offer.getOfferCategory().toString());
 		matrix.put("Details", offer.getDetails());
 		matrix.put("Open status", Boolean.toString(offer.isOpen()));
-		matrix.put("Likes", Integer.toString(offer.getLikes()));
+		matrix.put("Likes", offer.getLikes().toString());
 	}
 
 	@Override
@@ -110,19 +120,17 @@ public class OfferService implements GenericOfferService {
 
 	@Override
 	public List<Offer> getTopOffers() {
-		List<Offer> collect = offerRepository.findAll().stream().sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
-				.collect(Collectors.toList());
+		List<Offer> collect = offerRepository.findAll().stream()
+				.sorted((o1, o2) -> o2.getLikes().size() - o1.getLikes().size()).collect(Collectors.toList());
 		return collect;
 	}
 
+	@Override
 	public List<Offer> getTopNOffers(int n, Predicate<Offer> predicate) {
 		if (n > 0) {
 			// reverse sort on likes {max to min}
-			List<Offer> collect = offerRepository.findAll()
-					.stream()
-					.filter(predicate)
-					.sorted((o1, o2) -> o2.getLikes() - o1.getLikes())
-					.collect(Collectors.toList());
+			List<Offer> collect = offerRepository.findAll().stream().filter(predicate)
+					.sorted((o1, o2) -> o2.getLikes().size() - o1.getLikes().size()).collect(Collectors.toList());
 			return (n > collect.size()) ? List.of() : collect.subList(0, n);
 		} else {
 			return List.of();
@@ -130,9 +138,8 @@ public class OfferService implements GenericOfferService {
 	}
 
 	@Override
-	public Map<Integer, Offer> getOffersByCreationDate(LocalDate createdAt) {
-		// TODO Auto-generated method stub
-		return null;
+	public List<Offer> getOffersByCreationDate(@NotNull LocalDate createdAt) {
+		return offerRepository.findByCreatedAt(createdAt);
 	}
 
 }
