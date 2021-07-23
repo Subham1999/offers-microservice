@@ -20,6 +20,4 @@ public interface OfferRepository extends JpaRepository<Offer, Integer> {
 
 	List<Offer> findByCreatedAt(LocalDate createdAt);
 
-	List<Offer> findByIsOpen(boolean isOpen);
-
 }

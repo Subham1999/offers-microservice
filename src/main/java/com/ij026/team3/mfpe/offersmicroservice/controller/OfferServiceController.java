@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ij026.team3.mfpe.offersmicroservice.exception.NoSuchEmpIdException;
 import com.ij026.team3.mfpe.offersmicroservice.model.Offer;
 import com.ij026.team3.mfpe.offersmicroservice.model.OfferCategory;
 import com.ij026.team3.mfpe.offersmicroservice.service.OfferService;
@@ -35,6 +37,16 @@ import lombok.extern.log4j.Log4j2;
 @RestController
 @Log4j2
 public class OfferServiceController {
+
+	private ConcurrentHashMap<String, Object> empIdCache = new ConcurrentHashMap<>();
+
+	public OfferServiceController() {
+		empIdCache.put("guru", new Object());
+		empIdCache.put("nikky", new Object());
+		empIdCache.put("subsa", new Object());
+		empIdCache.put("rish", new Object());
+		empIdCache.put("ujjw", new Object());
+	}
 
 	@Autowired
 	private OfferService offerService;
@@ -79,38 +91,32 @@ public class OfferServiceController {
 		}
 	}
 
-	/**
-	 * 
-	 * URI ->
-	 * http://locahost:8080/offer-service/offers/search/by-likes?limit=3&empId=sub123
-	 * URI -> http://locahost:8080/offer-service/offers/search/by-likes?limit=3 URI
-	 * -> http://locahost:8080/offer-service/offers/search/by-likes
-	 * 
-	 * @param limit
-	 * @param empId
-	 * @return
-	 */
 	@GetMapping("/offers/search/by-likes")
 	public ResponseEntity<List<Offer>> getOfferDetailsByLikes(
 			@RequestParam(required = false, defaultValue = "3") Integer limit,
 			@RequestParam(required = false) String empId) {
-		try {
 
-			Predicate<Offer> predicate;
+		if (empIdCache.containsKey(empId)) {
+			try {
 
-			if (empId == null) {
-				predicate = o -> true;
-			} else {
-				predicate = o -> o.getAuthorId().equals(empId);
+				Predicate<Offer> predicate;
+
+				if (empId == null) {
+					predicate = o -> true;
+				} else {
+					predicate = o -> o.getAuthorId().equals(empId);
+				}
+
+				List<Offer> offers = offerService.getTopNOffers(limit, predicate);
+
+				log.debug("fetching top offer details by likes was succesfull");
+				return ResponseEntity.ok(offers);
+			} catch (Exception e) {
+				log.debug("exception {}", e.getMessage());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 			}
-
-			List<Offer> offers = offerService.getTopNOffers(limit, predicate);
-
-			log.debug("fetching top offer details by likes was succesfull");
-			return ResponseEntity.ok(offers);
-		} catch (Exception e) {
-			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+		} else {
+			throw new NoSuchEmpIdException("empid " + empId + " is invalid");
 		}
 	}
 
@@ -138,18 +144,23 @@ public class OfferServiceController {
 	@GetMapping("/offers/search/by-author")
 	public ResponseEntity<List<Offer>> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId) {
 
-		Predicate<Offer> filter1 = o -> o.getAuthorId().equals(authorId);
+		if (empIdCache.containsKey(authorId)) {
 
-		try {
-			Collection<Offer> allOffers = offerService.allOffers();
-			List<Offer> offers = allOffers.stream().filter(filter1).collect(Collectors.toList());
-			log.debug("fetching top offer details by likes was succesfull");
-			return ResponseEntity.ok(offers);
+			Predicate<Offer> filter1 = o -> o.getAuthorId().equals(authorId);
 
-		} catch (Exception e) {
-			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+			try {
+				Collection<Offer> allOffers = offerService.allOffers();
+				List<Offer> offers = allOffers.stream().filter(filter1).collect(Collectors.toList());
+				log.debug("fetching top offer details by likes was succesfull");
+				return ResponseEntity.ok(offers);
+
+			} catch (Exception e) {
+				log.debug("exception {}", e.getMessage());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+			}
 		}
+		
+		throw new NoSuchEmpIdException("authorId " + authorId + " is invalid");
 	}
 
 	@PostMapping("/offers")
