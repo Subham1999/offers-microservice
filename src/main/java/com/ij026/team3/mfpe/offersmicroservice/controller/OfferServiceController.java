@@ -4,6 +4,7 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,10 +21,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ij026.team3.mfpe.offersmicroservice.exception.NoSuchEmpIdException;
+import com.ij026.team3.mfpe.offersmicroservice.feign.AuthFeign;
 import com.ij026.team3.mfpe.offersmicroservice.model.Offer;
 import com.ij026.team3.mfpe.offersmicroservice.model.OfferCategory;
 import com.ij026.team3.mfpe.offersmicroservice.service.OfferService;
@@ -54,61 +57,121 @@ public class OfferServiceController {
 	@Autowired
 	private DateTimeFormatter dateTimeFormatter;
 
+	@Autowired
+	private AuthFeign authFeign;
+
 	@GetMapping("/test")
 	public String test(@RequestParam(required = false) Map<String, Object> map) {
 		map.forEach((s, o) -> System.err.println(s + " : " + o));
 		return "aaa";
 	}
 
+	private boolean isAuthorized(String jwtToken) {
+		try {
+			ResponseEntity<String> authorizeToken = authFeign.authorizeToken(jwtToken);
+			boolean ok = (authorizeToken.getStatusCodeValue() == 200);
+			if (ok) {
+				System.err.println("Authorized");
+			} else {
+				System.err.println("Not Authorized");
+			}
+			return ok;
+		} catch (Exception e) {
+			System.err.println("Connection failure");
+			return false;
+		}
+	}
+
 	@GetMapping("/offers")
-	public Collection<Offer> getOffers() {
-		return offerService.allOffers();
+	public Collection<Offer> getOffers(@RequestHeader(name = "Authorization") String jwtToken) {
+		if (isAuthorized(jwtToken)) {
+			return offerService.allOffers();
+		} else {
+			return Collections.emptyList();
+		}
 	}
 
 	@GetMapping("/offers/{offerId}")
-	public ResponseEntity<Offer> getOfferDetails(@PathVariable int offerId) {
-		try {
-			Optional<Offer> offerStatus = offerService.getOffer(offerId);
-			log.debug("fetching offer details by offer id {} was succesfull", offerId);
-			return offerStatus.isPresent() ? ResponseEntity.ok(offerStatus.get())
-					: ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-		} catch (Exception e) {
-			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+	public ResponseEntity<Offer> getOfferDetails(@RequestHeader(name = "Authorization") String jwtToken,
+			@PathVariable int offerId) {
+		if (isAuthorized(jwtToken)) {
+			try {
+				Optional<Offer> offerStatus = offerService.getOffer(offerId);
+				log.debug("fetching offer details by offer id {} was succesfull", offerId);
+				return offerStatus.isPresent() ? ResponseEntity.ok(offerStatus.get())
+						: ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+			} catch (Exception e) {
+				log.debug("exception {}", e.getMessage());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+			}
+		} else {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
 
 	@GetMapping("/offers/search/by-category")
-	public ResponseEntity<List<Offer>> getOfferDetailsByCategory(
+	public ResponseEntity<List<Offer>> getOfferDetailsByCategory(@RequestHeader(name = "Authorization") String jwtToken,
 			@RequestParam(required = true) OfferCategory offerCategory) {
-		try {
-			List<Offer> offers = offerService.getOffersByCategory(offerCategory);
-			log.debug("fetching offer details by category {} was succesfull", offerCategory.toString());
-			return ResponseEntity.ok(offers);
-		} catch (Exception e) {
-			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+		if (isAuthorized(jwtToken)) {
+			try {
+				List<Offer> offers = offerService.getOffersByCategory(offerCategory);
+				log.debug("fetching offer details by category {} was succesfull", offerCategory.toString());
+				return ResponseEntity.ok(offers);
+			} catch (Exception e) {
+				log.debug("exception {}", e.getMessage());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+			}
+		} else {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
 
 	@GetMapping("/offers/search/by-likes")
-	public ResponseEntity<List<Offer>> getOfferDetailsByLikes(
+	public ResponseEntity<List<Offer>> getOfferDetailsByLikes(@RequestHeader(name = "Authorization") String jwtToken,
 			@RequestParam(required = false, defaultValue = "3") Integer limit,
 			@RequestParam(required = false) String empId) {
+		if (isAuthorized(jwtToken)) {
+			if (empIdCache.containsKey(empId)) {
+				try {
 
-		if (empIdCache.containsKey(empId)) {
-			try {
+					Predicate<Offer> predicate;
 
-				Predicate<Offer> predicate;
+					if (empId == null) {
+						predicate = o -> true;
+					} else {
+						predicate = o -> o.getAuthorId().equals(empId);
+					}
 
-				if (empId == null) {
-					predicate = o -> true;
-				} else {
-					predicate = o -> o.getAuthorId().equals(empId);
+					List<Offer> offers = offerService.getTopNOffers(limit, predicate);
+
+					log.debug("fetching top offer details by likes was succesfull");
+					return ResponseEntity.ok(offers);
+				} catch (Exception e) {
+					log.debug("exception {}", e.getMessage());
+					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 				}
+			} else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			}
+		} else {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+	}
 
-				List<Offer> offers = offerService.getTopNOffers(limit, predicate);
+	@GetMapping("/offers/search/by-creation-date")
+	public ResponseEntity<List<Offer>> getOfferDetailsByPostDate(@RequestHeader(name = "Authorization") String jwtToken,
+			@RequestParam(required = true) String createdOn) {
+		LocalDate createdAt = null;
+		if (isAuthorized(jwtToken)) {
+			try {
+				createdAt = LocalDate.parse(createdOn, dateTimeFormatter);
+			} catch (DateTimeException e) {
+				log.debug("exception {}", e.getMessage());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+			}
 
+			try {
+				List<Offer> offers = offerService.getOffersByCreationDate(createdAt);
 				log.debug("fetching top offer details by likes was succesfull");
 				return ResponseEntity.ok(offers);
 			} catch (Exception e) {
@@ -116,69 +179,70 @@ public class OfferServiceController {
 				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 			}
 		} else {
-			throw new NoSuchEmpIdException("empid " + empId + " is invalid");
-		}
-	}
-
-	@GetMapping("/offers/search/by-creation-date")
-	public ResponseEntity<List<Offer>> getOfferDetailsByPostDate(@RequestParam(required = true) String createdOn) {
-		LocalDate createdAt = null;
-
-		try {
-			createdAt = LocalDate.parse(createdOn, dateTimeFormatter);
-		} catch (DateTimeException e) {
-			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
-		}
-
-		try {
-			List<Offer> offers = offerService.getOffersByCreationDate(createdAt);
-			log.debug("fetching top offer details by likes was succesfull");
-			return ResponseEntity.ok(offers);
-		} catch (Exception e) {
-			log.debug("exception {}", e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
 
 	@GetMapping("/offers/search/by-author")
-	public ResponseEntity<List<Offer>> getOfferDetailsByAuthor(@RequestParam(required = true) String authorId) {
+	public ResponseEntity<List<Offer>> getOfferDetailsByAuthor(@RequestHeader(name = "Authorization") String jwtToken,
+			@RequestParam(required = true) String authorId) {
+		if (isAuthorized(jwtToken)) {
+			if (empIdCache.containsKey(authorId)) {
 
-		if (empIdCache.containsKey(authorId)) {
+				Predicate<Offer> filter1 = o -> o.getAuthorId().equals(authorId);
 
-			Predicate<Offer> filter1 = o -> o.getAuthorId().equals(authorId);
+				try {
+					Collection<Offer> allOffers = offerService.allOffers();
+					List<Offer> offers = allOffers.stream().filter(filter1).collect(Collectors.toList());
+					log.debug("fetching top offer details by likes was succesfull");
+					return ResponseEntity.ok(offers);
 
-			try {
-				Collection<Offer> allOffers = offerService.allOffers();
-				List<Offer> offers = allOffers.stream().filter(filter1).collect(Collectors.toList());
-				log.debug("fetching top offer details by likes was succesfull");
-				return ResponseEntity.ok(offers);
-
-			} catch (Exception e) {
-				log.debug("exception {}", e.getMessage());
-				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+				} catch (Exception e) {
+					log.debug("exception {}", e.getMessage());
+					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+				}
 			}
+
+			throw new NoSuchEmpIdException("authorId " + authorId + " is invalid");
+		} else {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
-		
-		throw new NoSuchEmpIdException("authorId " + authorId + " is invalid");
 	}
 
 	@PostMapping("/offers")
-	public ResponseEntity<Boolean> addOffer(@Valid @RequestBody Offer newOffer) {
-		boolean b = offerService.createOffer(newOffer);
-		return b ? ResponseEntity.status(HttpStatus.CREATED).body(b)
-				: ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(b);
+	public ResponseEntity<Boolean> addOffer(@RequestHeader(name = "Authorization") String jwtToken,
+			@Valid @RequestBody Offer newOffer) {
+		if (isAuthorized(jwtToken)) {
+			if (empIdCache.containsKey(newOffer.getAuthorId())) {
+				boolean b = offerService.createOffer(newOffer);
+				return b ? ResponseEntity.status(HttpStatus.CREATED).body(b)
+						: ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(b);
+			} else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			}
+		} else {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
 	}
 
 	@PostMapping("/offers/{offerId}/likes")
-	public ResponseEntity<Offer> likeOffer(@PathVariable int offerId, @RequestParam(required = true) String likedBy) {
-		Optional<Offer> optional = offerService.getOffer(offerId);
-		if (optional.isPresent()) {
-			Offer offer = optional.get();
-			offer.like(likedBy);
-			return ResponseEntity.status(HttpStatus.ACCEPTED).body(offerService.updateOffer(offer));
+	public ResponseEntity<Offer> likeOffer(@RequestHeader(name = "Authorization") String jwtToken,
+			@PathVariable int offerId, @RequestParam(required = true) String likedBy) {
+		if (isAuthorized(jwtToken)) {
+			if (empIdCache.containsKey(likedBy)) {
+				Optional<Offer> optional = offerService.getOffer(offerId);
+				if (optional.isPresent()) {
+					Offer offer = optional.get();
+					offer.like(likedBy);
+					return ResponseEntity.status(HttpStatus.ACCEPTED).body(offerService.updateOffer(offer));
+				}
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			} else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			}
+		} else {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
-		return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 	}
 
 }

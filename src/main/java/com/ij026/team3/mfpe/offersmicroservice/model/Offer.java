@@ -57,7 +57,10 @@ public class Offer {
 	private String buyerId;
 
 	public void like(String empId) {
-		likes.add(new Like(empId, LocalDate.now()));
+		Like newLike = new Like(empId, LocalDate.now());
+		if (!likes.contains(newLike)) {
+			likes.add(newLike);
+		}
 	}
 
 	public boolean isOpen() {

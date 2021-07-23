@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 
 import springfox.documentation.builders.PathSelectors;
@@ -15,6 +16,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 @SpringBootApplication
 @EnableSwagger2
+@EnableFeignClients
 public class OffersMicroserviceApplication {
 
 	public static void main(String[] args) {
@@ -32,34 +34,10 @@ public class OffersMicroserviceApplication {
 		return DateTimeFormatter.ofPattern("dd-MM-yyyy");
 	}
 
-//	@Bean
-//	public Docket swaggerConfigration() {
-//		return new Docket(DocumentationType.SWAGGER_2)
-//				.groupName("public-api")
-//				.apiInfo(apiInfo())
-//				.select()
-//				.apis(RequestHandlerSelectors.basePackage("com.cts"))
-////					.paths(myPaths())
-//				.build();
-//	}
-//
-//	private Predicate<String> myPaths() {
-//		return PathSelectors.regex("/api/.*");
-//	}
-//
-//	private ApiInfo apiInfo() {
-//		return new ApiInfoBuilder()
-//				.title("employee api")
-//				.version("v1.1.0")
-//				.contact(new Contact("Subham Santra", "", "subhamsantra2016@gmail.com"))
-//				.build();
-//	}
-
 	@Bean
 	public Docket apiDocket() {
 
-		Docket docket = new Docket(DocumentationType.SWAGGER_2).select()
-				.apis(RequestHandlerSelectors.any())
+		Docket docket = new Docket(DocumentationType.SWAGGER_2).select().apis(RequestHandlerSelectors.any())
 				.paths(PathSelectors.any()).build();
 
 		return docket;
