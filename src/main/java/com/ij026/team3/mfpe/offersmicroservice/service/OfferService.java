@@ -27,6 +27,10 @@ public class OfferService implements GenericOfferService {
 	@Autowired
 	private OfferRepository offerRepository;
 
+	public boolean ifOfferExists(int offerId) {
+		return offerRepository.existsById(offerId);
+	}
+
 	public Collection<Offer> allOffers() {
 		return offerRepository.findAll();
 	}
@@ -45,8 +49,8 @@ public class OfferService implements GenericOfferService {
 
 	@Override
 	public boolean createOffer(Offer offer) {
-		if (checkIfPresent(offer.getOfferId()))
-			return false;
+//		if (checkIfPresent(offer.getOfferId()))
+//			return false;
 		Offer save = offerRepository.save(offer);
 		return save != null;
 	}
@@ -80,9 +84,19 @@ public class OfferService implements GenericOfferService {
 	public boolean buyOffer(String buyerId, int offerId) {
 		Optional<Offer> foundByOfferId = offerRepository.findByOfferId(offerId);
 		if (foundByOfferId.isPresent()) {
-			foundByOfferId.get().setBuyerId(buyerId);
-			Offer save = offerRepository.save(foundByOfferId.get());
-			return save != null;
+//			Version 1
+//			foundByOfferId.get().setBuyerId(buyerId);
+//			Offer save = offerRepository.save(foundByOfferId.get());
+//			return save != null;
+
+//			Version 2
+			Offer offer = foundByOfferId.get();
+			boolean buy = offer.buy(buyerId);
+			if (buy) {
+				return offerRepository.save(offer) != null;
+			} else {
+				return false;
+			}
 		}
 		return false;
 	}
@@ -134,8 +148,7 @@ public class OfferService implements GenericOfferService {
 		if (n > 0) {
 			// reverse sort on likes {max to min}
 			List<Offer> collect = offerRepository.findAll().stream().filter(predicate)
-					.sorted((o1, o2) -> o2.getLikes().size() - o1.getLikes().size())
-					.collect(Collectors.toList());
+					.sorted((o1, o2) -> o2.getLikes().size() - o1.getLikes().size()).collect(Collectors.toList());
 			return collect.subList(0, n);
 		} else {
 			return List.of();

@@ -10,7 +10,7 @@ import com.ij026.team3.mfpe.offersmicroservice.model.AuthRequest;
 import com.ij026.team3.mfpe.offersmicroservice.model.AuthResponse;
 
 
-@FeignClient(name = "auth", url = "${AUTH_URL:http://localhost:6666/auth}")
+@FeignClient(name = "auth", url = "${AMS_URL:http://localhost:6666/auth}")
 public interface AuthFeign {
 
 	@PostMapping(value = "/authenticate")

@@ -11,6 +11,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -56,6 +57,9 @@ public class Offer {
 
 	private String buyerId;
 
+	@Min(value = 0)
+	private double price;
+
 	public void like(String empId) {
 		Like newLike = new Like(empId, LocalDate.now());
 		if (!likes.contains(newLike)) {
@@ -64,6 +68,16 @@ public class Offer {
 	}
 
 	public boolean isOpen() {
-		return closedAt != null && (createdAt.equals(closedAt) || createdAt.isBefore(closedAt));
+		return closedAt == null;
+	}
+
+	public boolean buy(String buyerEmpId) {
+		if (isOpen()) {
+			closedAt = LocalDate.now();
+			buyerId = buyerEmpId;
+			return true;
+		} else {
+			return false;
+		}
 	}
 }

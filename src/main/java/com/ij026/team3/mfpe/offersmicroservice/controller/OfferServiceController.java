@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ij026.team3.mfpe.offersmicroservice.exception.NoSuchEmpIdException;
 import com.ij026.team3.mfpe.offersmicroservice.feign.AuthFeign;
 import com.ij026.team3.mfpe.offersmicroservice.model.Offer;
 import com.ij026.team3.mfpe.offersmicroservice.model.OfferCategory;
@@ -34,7 +33,7 @@ import com.ij026.team3.mfpe.offersmicroservice.service.OfferService;
 import lombok.extern.log4j.Log4j2;
 
 /**
- * @author Admin
+ * @author Subham Santra
  *
  */
 @RestController
@@ -68,8 +67,10 @@ public class OfferServiceController {
 
 	private boolean isAuthorized(String jwtToken) {
 		try {
+			log.debug("calling authFeign client");
 			ResponseEntity<String> authorizeToken = authFeign.authorizeToken(jwtToken);
 			boolean ok = (authorizeToken.getStatusCodeValue() == 200);
+			log.debug("authorization status {}", authorizeToken.getStatusCodeValue());
 			if (ok) {
 				System.err.println("Authorized");
 			} else {
@@ -85,8 +86,10 @@ public class OfferServiceController {
 	@GetMapping("/offers")
 	public Collection<Offer> getOffers(@RequestHeader(name = "Authorization") String jwtToken) {
 		if (isAuthorized(jwtToken)) {
+			log.debug("fetching all offers");
 			return offerService.allOffers();
 		} else {
+			log.debug("jwtToken invalid");
 			return Collections.emptyList();
 		}
 	}
@@ -94,17 +97,24 @@ public class OfferServiceController {
 	@GetMapping("/offers/{offerId}")
 	public ResponseEntity<Offer> getOfferDetails(@RequestHeader(name = "Authorization") String jwtToken,
 			@PathVariable int offerId) {
+
+		log.debug("Calling getOfferDetails");
 		if (isAuthorized(jwtToken)) {
 			try {
 				Optional<Offer> offerStatus = offerService.getOffer(offerId);
-				log.debug("fetching offer details by offer id {} was succesfull", offerId);
-				return offerStatus.isPresent() ? ResponseEntity.ok(offerStatus.get())
-						: ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+				if (offerStatus.isPresent()) {
+					log.debug("fetching offer details by offer id {} was succesfull", offerId);
+					return ResponseEntity.ok(offerStatus.get());
+				} else {
+					log.debug("fetching offer details by offer id {} was unsuccesfull", offerId);
+					return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+				}
 			} catch (Exception e) {
-				log.debug("exception {}", e.getMessage());
+				log.debug("exception @getOfferDetails : {}", e.getMessage());
 				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 			}
 		} else {
+			log.debug("jwtToken invalid");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
@@ -112,16 +122,20 @@ public class OfferServiceController {
 	@GetMapping("/offers/search/by-category")
 	public ResponseEntity<List<Offer>> getOfferDetailsByCategory(@RequestHeader(name = "Authorization") String jwtToken,
 			@RequestParam(required = true) OfferCategory offerCategory) {
+
+		log.debug("Calling getOfferDetailsByCategory");
+
 		if (isAuthorized(jwtToken)) {
 			try {
 				List<Offer> offers = offerService.getOffersByCategory(offerCategory);
 				log.debug("fetching offer details by category {} was succesfull", offerCategory.toString());
 				return ResponseEntity.ok(offers);
 			} catch (Exception e) {
-				log.debug("exception {}", e.getMessage());
+				log.debug("exception @getOfferDetailsByCategory : {}", e.getMessage());
 				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 			}
 		} else {
+			log.debug("jwtToken invalid");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
@@ -130,6 +144,8 @@ public class OfferServiceController {
 	public ResponseEntity<List<Offer>> getOfferDetailsByLikes(@RequestHeader(name = "Authorization") String jwtToken,
 			@RequestParam(required = false, defaultValue = "3") Integer limit,
 			@RequestParam(required = false) String empId) {
+		log.debug("Calling getOfferDetailsByLikes");
+
 		if (isAuthorized(jwtToken)) {
 			if (empIdCache.containsKey(empId)) {
 				try {
@@ -147,13 +163,15 @@ public class OfferServiceController {
 					log.debug("fetching top offer details by likes was succesfull");
 					return ResponseEntity.ok(offers);
 				} catch (Exception e) {
-					log.debug("exception {}", e.getMessage());
+					log.debug("exception @getOfferDetailsByLikes : {}", e.getMessage());
 					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 				}
 			} else {
+				log.debug("empId {} invalid", empId);
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 			}
 		} else {
+			log.debug("jwtToken invalid");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
@@ -161,12 +179,14 @@ public class OfferServiceController {
 	@GetMapping("/offers/search/by-creation-date")
 	public ResponseEntity<List<Offer>> getOfferDetailsByPostDate(@RequestHeader(name = "Authorization") String jwtToken,
 			@RequestParam(required = true) String createdOn) {
+		log.debug("Calling getOfferDetailsByLikes");
+
 		LocalDate createdAt = null;
 		if (isAuthorized(jwtToken)) {
 			try {
 				createdAt = LocalDate.parse(createdOn, dateTimeFormatter);
 			} catch (DateTimeException e) {
-				log.debug("exception {}", e.getMessage());
+				log.debug("exception @getOfferDetailsByLikes : {}", e.getMessage());
 				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 			}
 
@@ -175,10 +195,11 @@ public class OfferServiceController {
 				log.debug("fetching top offer details by likes was succesfull");
 				return ResponseEntity.ok(offers);
 			} catch (Exception e) {
-				log.debug("exception {}", e.getMessage());
+				log.debug("exception @getOfferDetailsByLikes : {}", e.getMessage());
 				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 			}
 		} else {
+			log.debug("jwtToken invalid");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
@@ -186,25 +207,26 @@ public class OfferServiceController {
 	@GetMapping("/offers/search/by-author")
 	public ResponseEntity<List<Offer>> getOfferDetailsByAuthor(@RequestHeader(name = "Authorization") String jwtToken,
 			@RequestParam(required = true) String authorId) {
+		log.debug("Calling getOfferDetailsByAuthor");
+
 		if (isAuthorized(jwtToken)) {
 			if (empIdCache.containsKey(authorId)) {
-
 				Predicate<Offer> filter1 = o -> o.getAuthorId().equals(authorId);
-
 				try {
 					Collection<Offer> allOffers = offerService.allOffers();
 					List<Offer> offers = allOffers.stream().filter(filter1).collect(Collectors.toList());
 					log.debug("fetching top offer details by likes was succesfull");
 					return ResponseEntity.ok(offers);
-
 				} catch (Exception e) {
-					log.debug("exception {}", e.getMessage());
+					log.debug("exception @getOfferDetailsByAuthor : {}", e.getMessage());
 					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 				}
+			} else {
+				log.debug("authorId {} invalid", authorId);
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
 			}
-
-			throw new NoSuchEmpIdException("authorId " + authorId + " is invalid");
 		} else {
+			log.debug("jwtToken invalid");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
@@ -212,15 +234,21 @@ public class OfferServiceController {
 	@PostMapping("/offers")
 	public ResponseEntity<Boolean> addOffer(@RequestHeader(name = "Authorization") String jwtToken,
 			@Valid @RequestBody Offer newOffer) {
+		log.debug("Calling addOffer");
 		if (isAuthorized(jwtToken)) {
 			if (empIdCache.containsKey(newOffer.getAuthorId())) {
 				boolean b = offerService.createOffer(newOffer);
+				if (b) {
+					log.debug("New Offer created");
+				}
 				return b ? ResponseEntity.status(HttpStatus.CREATED).body(b)
 						: ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(b);
 			} else {
+				log.debug("New Offer AuthorId {} is invalid", newOffer.getAuthorId());
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 			}
 		} else {
+			log.debug("jwtToken invalid");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
@@ -228,19 +256,47 @@ public class OfferServiceController {
 	@PostMapping("/offers/{offerId}/likes")
 	public ResponseEntity<Offer> likeOffer(@RequestHeader(name = "Authorization") String jwtToken,
 			@PathVariable int offerId, @RequestParam(required = true) String likedBy) {
+		log.debug("Calling likeOffer");
 		if (isAuthorized(jwtToken)) {
-			if (empIdCache.containsKey(likedBy)) {
+			if (empIdCache.containsKey(likedBy) && offerService.ifOfferExists(offerId)) {
 				Optional<Offer> optional = offerService.getOffer(offerId);
 				if (optional.isPresent()) {
 					Offer offer = optional.get();
 					offer.like(likedBy);
 					return ResponseEntity.status(HttpStatus.ACCEPTED).body(offerService.updateOffer(offer));
 				}
+				log.debug("No offer with offerId {} found", offerId);
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 			} else {
+				log.debug("likedBy {} Or offerId {} invalid", likedBy, offerId);
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 			}
 		} else {
+			log.debug("jwtToken invalid");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+	}
+
+	@PostMapping("/offers/{offerId}/buy")
+	public ResponseEntity<Boolean> buyOffer(@RequestHeader(name = "Authorization") String jwtToken,
+			@PathVariable int offerId, @RequestParam(required = true) String buyerId) {
+		log.debug("Calling buyOffer");
+
+		if (isAuthorized(jwtToken)) {
+			if (empIdCache.containsKey(buyerId) && offerService.ifOfferExists(offerId)) {
+				boolean buyOffer = offerService.buyOffer(buyerId, offerId);
+				if (buyOffer) {
+					log.debug("Offer with offerId {} is bought by buyerId {}", offerId, buyerId);
+					return ResponseEntity.ok(true);
+				} else {
+					log.debug("Offer with offerId {} is closed", offerId);
+					return ResponseEntity.badRequest().body(false);
+				}
+			}
+			log.debug("buyerId {} Or offerId {} invalid", buyerId, offerId);
+			return ResponseEntity.badRequest().body(false);
+		} else {
+			log.debug("jwtToken invalid");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 	}
