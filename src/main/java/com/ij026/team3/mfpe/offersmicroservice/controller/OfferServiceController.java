@@ -4,7 +4,6 @@ import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,13 +83,13 @@ public class OfferServiceController {
 	}
 
 	@GetMapping("/offers")
-	public Collection<Offer> getOffers(@RequestHeader(name = "Authorization") String jwtToken) {
+	public ResponseEntity<Collection<Offer>> getOffers(@RequestHeader(name = "Authorization") String jwtToken) {
 		if (isAuthorized(jwtToken)) {
 			log.debug("fetching all offers");
-			return offerService.allOffers();
+			return ResponseEntity.ok(offerService.allOffers());
 		} else {
 			log.debug("jwtToken invalid");
-			return Collections.emptyList();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -115,7 +114,7 @@ public class OfferServiceController {
 			}
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -136,7 +135,7 @@ public class OfferServiceController {
 			}
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -172,7 +171,7 @@ public class OfferServiceController {
 			}
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -200,7 +199,7 @@ public class OfferServiceController {
 			}
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -227,7 +226,7 @@ public class OfferServiceController {
 			}
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -249,7 +248,7 @@ public class OfferServiceController {
 			}
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -273,7 +272,7 @@ public class OfferServiceController {
 			}
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
@@ -297,7 +296,7 @@ public class OfferServiceController {
 			return ResponseEntity.badRequest().body(false);
 		} else {
 			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 	}
 
