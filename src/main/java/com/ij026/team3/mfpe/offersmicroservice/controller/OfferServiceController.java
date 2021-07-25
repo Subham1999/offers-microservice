@@ -16,6 +16,7 @@ import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,7 @@ import lombok.extern.log4j.Log4j2;
  *
  */
 @RestController
+@CrossOrigin
 @Log4j2
 public class OfferServiceController {
 
@@ -83,14 +85,14 @@ public class OfferServiceController {
 	}
 
 	@GetMapping("/offers")
-	public ResponseEntity<Collection<Offer>> getOffers(@RequestHeader(name = "Authorization") String jwtToken) {
-		if (isAuthorized(jwtToken)) {
-			log.debug("fetching all offers");
-			return ResponseEntity.ok(offerService.allOffers());
-		} else {
-			log.debug("jwtToken invalid");
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
+	public ResponseEntity<Collection<Offer>> getOffers() {
+//		if (isAuthorized(jwtToken)) {
+		log.debug("fetching all offers");
+		return ResponseEntity.ok(offerService.allOffers());
+//		} else {
+//			log.debug("jwtToken invalid");
+//			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//		}
 	}
 
 	@GetMapping("/offers/{offerId}")
