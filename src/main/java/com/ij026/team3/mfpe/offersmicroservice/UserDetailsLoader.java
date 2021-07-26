@@ -21,7 +21,7 @@ public class UserDetailsLoader implements ApplicationRunner {
 		System.err.println("User details prepopulated In OFFER MICROSERVICE!!");
 	}
 
-	public String getPassword(String empId) {
-		return userDetailsDB.getOrDefault(empId, null);
+	public boolean ifPresent(String empId) {
+		return userDetailsDB.containsKey(empId);
 	}
 }

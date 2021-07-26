@@ -86,13 +86,14 @@ public class OfferServiceController {
 
 	@GetMapping("/offers")
 	public ResponseEntity<Collection<Offer>> getOffers() {
-//		if (isAuthorized(jwtToken)) {
 		log.debug("fetching all offers");
 		return ResponseEntity.ok(offerService.allOffers());
-//		} else {
-//			log.debug("jwtToken invalid");
-//			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-//		}
+	}
+
+	@GetMapping("/offercategories")
+	public ResponseEntity<OfferCategory[]> getOfferCategories() {
+		log.debug("fetching all offerCategories");
+		return ResponseEntity.ok(OfferCategory.values());
 	}
 
 	@GetMapping("/offers/{offerId}")

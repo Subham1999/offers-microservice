@@ -7,6 +7,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Shape;
@@ -29,6 +30,7 @@ public class Comment {
 	private long id;
 	@NotBlank
 	private String commenterId;
+	@NotNull
 	private Integer offerId;
 	@NotBlank
 	private String text;
