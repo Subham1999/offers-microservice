@@ -292,14 +292,16 @@ public class OfferServiceController {
 		log.debug("Calling buyOffer");
 
 		if (isAuthorized(jwtToken)) {
-			if (empIdCache.containsKey(buyerId) && offerService.ifOfferExists(offerId)) {
-				boolean buyOffer = offerService.buyOffer(buyerId, offerId);
-				if (buyOffer) {
-					log.debug("Offer with offerId {} is bought by buyerId {}", offerId, buyerId);
-					return ResponseEntity.ok(true);
-				} else {
-					log.debug("Offer with offerId {} is closed", offerId);
-					return ResponseEntity.badRequest().body(false);
+			if (empIdCache.containsKey(buyerId)) {
+				if (offerService.ifOfferExists(offerId)) {
+					boolean buyOffer = offerService.buyOffer(buyerId, offerId);
+					if (buyOffer) {
+						log.debug("Offer with offerId {} is bought by buyerId {}", offerId, buyerId);
+						return ResponseEntity.ok(true);
+					} else {
+						log.debug("Offer with offerId {} is closed", offerId);
+						return ResponseEntity.badRequest().body(false);
+					}
 				}
 			}
 			log.debug("buyerId {} Or offerId {} invalid", buyerId, offerId);

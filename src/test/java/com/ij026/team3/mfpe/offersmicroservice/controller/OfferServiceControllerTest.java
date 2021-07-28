@@ -1,11 +1,9 @@
 package com.ij026.team3.mfpe.offersmicroservice.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +19,6 @@ import org.mockito.InjectMocks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -35,11 +32,11 @@ class OfferServiceControllerTest {
 
 	@MockBean
 	private OfferService offerService;
-
-	@Bean
-	private DateTimeFormatter dateTimeFormatter() {
-		return DateTimeFormatter.ofPattern("dd-MM-yyyy");
-	}
+//
+//	@Bean
+//	private DateTimeFormatter dateTimeFormatter() {
+//		return DateTimeFormatter.ofPattern("dd-MM-yyyy");
+//	}
 
 	@MockBean
 	private AuthFeign authFeign;
@@ -77,6 +74,8 @@ class OfferServiceControllerTest {
 	void tearDown() throws Exception {
 		jwtToken_inValid = jwtToken_valid = null;
 		offer1 = null;
+		empId_inValid = null;
+		empId_valid = null;
 	}
 
 	@Test
@@ -337,24 +336,115 @@ class OfferServiceControllerTest {
 
 	@Test
 	void testLikeOffer_allValid() {
-		fail("Not yet implemented");
+		Integer offerId = offer1.getOfferId();
+		when(this.authFeign.authorizeToken(this.jwtToken_valid)).thenReturn(ResponseEntity.ok(this.empId_valid));
+		when(this.offerService.getOffer(offerId)).thenReturn(Optional.of(offer1));
+		when(this.offerService.updateOffer(offer1)).thenReturn(offer1);
+
+		ResponseEntity<Offer> expected = ResponseEntity.status(HttpStatus.ACCEPTED).body(offer1);
+		ResponseEntity<Offer> actual = this.offerServiceController.likeOffer(jwtToken_valid, offerId, empId_valid);
+
+		assertEquals(expected, actual);
 	}
+
 	@Test
 	void testLikeOffer_inValidEmpId() {
-		fail("Not yet implemented");
+		Integer offerId = offer1.getOfferId();
+		when(this.authFeign.authorizeToken(this.jwtToken_valid)).thenReturn(ResponseEntity.ok(this.empId_valid));
+//		when(this.offerService.getOffer(offerId)).thenReturn(Optional.of(offer1));
+//		when(this.offerService.updateOffer(offer1)).thenReturn(offer1);
+
+		ResponseEntity<Offer> expected = ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		ResponseEntity<Offer> actual = this.offerServiceController.likeOffer(jwtToken_valid, offerId, empId_inValid);
+
+		assertEquals(expected, actual);
 	}
+
 	@Test
 	void testLikeOffer_OfferDoesnotExist() {
-		fail("Not yet implemented");
+		Integer offerId = offer1.getOfferId();
+		when(this.authFeign.authorizeToken(this.jwtToken_valid)).thenReturn(ResponseEntity.ok(this.empId_valid));
+		when(this.offerService.getOffer(offerId)).thenReturn(Optional.empty());
+//		when(this.offerService.updateOffer(offer1)).thenReturn(offer1);
+
+		ResponseEntity<Offer> expected = ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		ResponseEntity<Offer> actual = this.offerServiceController.likeOffer(jwtToken_valid, offerId, empId_valid);
+
+		assertEquals(expected, actual);
 	}
+
 	@Test
 	void testLikeOffer_invalidJwt() {
-		fail("Not yet implemented");
+		Integer offerId = offer1.getOfferId();
+		when(this.authFeign.authorizeToken(this.jwtToken_inValid)).thenReturn(ResponseEntity.badRequest().build());
+//		when(this.offerService.getOffer(offerId)).thenReturn(Optional.of(offer1));
+//		when(this.offerService.updateOffer(offer1)).thenReturn(offer1);
+
+		ResponseEntity<Offer> expected = ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		ResponseEntity<Offer> actual = this.offerServiceController.likeOffer(jwtToken_inValid, offerId, empId_valid);
+
+		assertEquals(expected, actual);
 	}
-//
-//	@Test
-//	void testBuyOffer() {
-//		fail("Not yet implemented");
-//	}
+
+	@Test
+	void testBuyOffer_AllValid() {
+		String buyerId = "ujjw";
+		int offerId = offer1.getOfferId();
+
+		when(this.authFeign.authorizeToken(this.jwtToken_valid)).thenReturn(ResponseEntity.ok(this.empId_valid));
+		when(this.offerService.buyOffer(buyerId, offerId)).thenReturn(true);
+		when(this.offerService.ifOfferExists(offerId)).thenReturn(true);
+
+		ResponseEntity<Boolean> expected = ResponseEntity.ok(true);
+		ResponseEntity<Boolean> actual = this.offerServiceController.buyOffer(jwtToken_valid, offerId, buyerId);
+
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	void testBuyOffer_invalidJwtToken() {
+		String buyerId = "ujjw";
+		int offerId = offer1.getOfferId();
+
+		when(this.authFeign.authorizeToken(this.jwtToken_inValid)).thenReturn(ResponseEntity.badRequest().build());
+//		when(this.offerService.buyOffer(buyerId, offerId)).thenReturn(true);
+
+		ResponseEntity<Boolean> expected = ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		ResponseEntity<Boolean> actual = this.offerServiceController.buyOffer(jwtToken_inValid, offerId, buyerId);
+
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	void testBuyOffer_invalidBuyerId() {
+		String buyerId = "akajajaja";
+		int offerId = offer1.getOfferId();
+
+		when(this.authFeign.authorizeToken(this.jwtToken_valid)).thenReturn(ResponseEntity.ok(this.empId_valid));
+		when(this.offerService.buyOffer(buyerId, offerId)).thenReturn(true);
+		when(this.offerService.ifOfferExists(offerId)).thenReturn(true);
+
+		ResponseEntity<Boolean> expected = ResponseEntity.badRequest().body(false);
+		ResponseEntity<Boolean> actual = this.offerServiceController.buyOffer(jwtToken_valid, offerId, buyerId);
+
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	void testBuyOffer_offerAlreadyClosed() {
+
+		String buyerId = "ujjw";
+		int offerId = offer1.getOfferId();
+
+		when(this.authFeign.authorizeToken(this.jwtToken_valid)).thenReturn(ResponseEntity.ok(this.empId_valid));
+		when(this.offerService.buyOffer(buyerId, offerId)).thenReturn(false);
+		when(this.offerService.ifOfferExists(offerId)).thenReturn(true);
+
+		ResponseEntity<Boolean> expected = ResponseEntity.badRequest().body(false);
+		ResponseEntity<Boolean> actual = this.offerServiceController.buyOffer(jwtToken_valid, offerId, buyerId);
+
+		assertEquals(expected, actual);
+
+	}
 
 }
