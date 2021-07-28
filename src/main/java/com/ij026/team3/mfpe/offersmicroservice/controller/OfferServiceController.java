@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -60,6 +61,9 @@ public class OfferServiceController {
 	@Autowired
 	private AuthFeign authFeign;
 
+//	BiPredicate<String, Offer> authorFilter_forOffer = (empId, offer) -> empId == null ? true
+//			: offer.getAuthorId().equals(empId);
+
 	@GetMapping("/test")
 	public String test(@RequestParam(required = false) Map<String, Object> map) {
 		map.forEach((s, o) -> System.err.println(s + " : " + o));
@@ -104,6 +108,7 @@ public class OfferServiceController {
 		if (isAuthorized(jwtToken)) {
 			try {
 				Optional<Offer> offerStatus = offerService.getOffer(offerId);
+				System.err.println(offerStatus);
 				if (offerStatus.isPresent()) {
 					log.debug("fetching offer details by offer id {} was succesfull", offerId);
 					return ResponseEntity.ok(offerStatus.get());
@@ -134,7 +139,7 @@ public class OfferServiceController {
 				return ResponseEntity.ok(offers);
 			} catch (Exception e) {
 				log.debug("exception @getOfferDetailsByCategory : {}", e.getMessage());
-				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 			}
 		} else {
 			log.debug("jwtToken invalid");
@@ -162,7 +167,8 @@ public class OfferServiceController {
 
 					List<Offer> offers = offerService.getTopNOffers(limit, predicate);
 
-					log.debug("fetching top offer details by likes was succesfull");
+					log.debug("predicate : {}", predicate.hashCode());
+					log.debug("fetching top offer details by likes was succesfull {}", offers);
 					return ResponseEntity.ok(offers);
 				} catch (Exception e) {
 					log.debug("exception @getOfferDetailsByLikes : {}", e.getMessage());
@@ -189,7 +195,7 @@ public class OfferServiceController {
 				createdAt = LocalDate.parse(createdOn, dateTimeFormatter);
 			} catch (DateTimeException e) {
 				log.debug("exception @getOfferDetailsByLikes : {}", e.getMessage());
-				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 			}
 
 			try {
@@ -198,7 +204,7 @@ public class OfferServiceController {
 				return ResponseEntity.ok(offers);
 			} catch (Exception e) {
 				log.debug("exception @getOfferDetailsByLikes : {}", e.getMessage());
-				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 			}
 		} else {
 			log.debug("jwtToken invalid");
@@ -221,11 +227,11 @@ public class OfferServiceController {
 					return ResponseEntity.ok(offers);
 				} catch (Exception e) {
 					log.debug("exception @getOfferDetailsByAuthor : {}", e.getMessage());
-					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 				}
 			} else {
 				log.debug("authorId {} invalid", authorId);
-				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 			}
 		} else {
 			log.debug("jwtToken invalid");
@@ -260,17 +266,18 @@ public class OfferServiceController {
 			@PathVariable int offerId, @RequestParam(required = true) String likedBy) {
 		log.debug("Calling likeOffer");
 		if (isAuthorized(jwtToken)) {
-			if (empIdCache.containsKey(likedBy) && offerService.ifOfferExists(offerId)) {
+			if (empIdCache.containsKey(likedBy)) {
 				Optional<Offer> optional = offerService.getOffer(offerId);
 				if (optional.isPresent()) {
 					Offer offer = optional.get();
 					offer.like(likedBy);
 					return ResponseEntity.status(HttpStatus.ACCEPTED).body(offerService.updateOffer(offer));
+				} else {
+					log.debug("No offer with offerId {} found", offerId);
+					return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 				}
-				log.debug("No offer with offerId {} found", offerId);
-				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 			} else {
-				log.debug("likedBy {} Or offerId {} invalid", likedBy, offerId);
+				log.debug("likedBy empId {} invalid", likedBy);
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 			}
 		} else {

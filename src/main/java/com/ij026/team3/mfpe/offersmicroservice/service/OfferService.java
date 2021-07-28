@@ -52,21 +52,24 @@ public class OfferService implements GenericOfferService {
 //		if (checkIfPresent(offer.getOfferId()))
 //			return false;
 		Offer save = offerRepository.save(offer);
+		System.out.println(save);
 		return save != null;
 	}
 
 	// ...../offers/{id} [POST] => request Body => offer
 	@Override
 	public boolean updateOffer(int offerId, Offer offer) {
-		if (offerId == offer.getOfferId() && checkIfPresent(offerId)) {
-			Offer save = offerRepository.save(offer);
-			return save != null;
+		if (offerId == offer.getOfferId()) {
+			if (checkIfPresent(offerId)) {
+				Offer save = offerRepository.save(offer);
+				return save != null;
+			}
 		}
 		return false;
 	}
 
 	public boolean checkIfPresent(int offerId) {
-		return offerRepository.findByOfferId(offerId).isPresent();
+		return offerRepository.existsById(offerId);
 	}
 
 	@Override
@@ -117,7 +120,7 @@ public class OfferService implements GenericOfferService {
 	public void buildMatrix(Map<String, String> matrix, Optional<Offer> foundByOfferId) {
 		Offer offer = foundByOfferId.get();
 		matrix.put("Author ID", offer.getAuthorId());
-		if (!offer.getBuyerId().isBlank()) {
+		if (offer.getBuyerId() != null) {
 			matrix.put("Buyer ID", offer.getBuyerId());
 		}
 		matrix.put("Category", offer.getOfferCategory().toString());
@@ -129,11 +132,6 @@ public class OfferService implements GenericOfferService {
 	@Override
 	public List<Offer> getOffersByCategory(OfferCategory offerCategory) {
 		return offerRepository.findByOfferCategory(offerCategory);
-	}
-
-	public List<Offer> getOffersByCategory(OfferCategory offerCategory, int offerId) {
-		return offerRepository.findByOfferCategory(offerCategory).stream().filter(o -> o.getOfferId() == offerId)
-				.collect(Collectors.toList());
 	}
 
 	@Override

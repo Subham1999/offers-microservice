@@ -4,12 +4,14 @@ import java.time.LocalDate;
 import java.util.function.Predicate;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import com.ij026.team3.mfpe.offersmicroservice.UserDetailsLoader;
 import com.ij026.team3.mfpe.offersmicroservice.dao.CommentsRepository;
 import com.ij026.team3.mfpe.offersmicroservice.dao.OfferRepository;
 import com.ij026.team3.mfpe.offersmicroservice.model.Comment;
 
+@Service
 public class CommentService implements GenericCommentService {
 
 	@Autowired
@@ -21,8 +23,11 @@ public class CommentService implements GenericCommentService {
 
 	@Override
 	public boolean addComment(int offerId, Comment comment) {
-		if (loader.ifPresent(comment.getCommenterId())) {
-			if (offerRepository.existsById(offerId)) {
+		boolean ifPresent = loader.ifPresent(comment.getCommenterId());
+		if (ifPresent) {
+			boolean existsById = offerRepository.existsById(offerId);
+			System.err.println(existsById);
+			if (existsById) {
 				comment.setOfferId(offerId);
 				comment.setDate(LocalDate.now());
 				commentsRepository.save(comment);
